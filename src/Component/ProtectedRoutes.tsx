@@ -1,15 +1,14 @@
-import React from "react";
-import { Navigate } from "react-router-dom";
-import { useSelector } from "react-redux";
-import { RootState } from "../Redux/store";
-import { UserRoleType } from "../Types";
+import React from 'react';
+import { useSelector } from 'react-redux';
+import { Navigate } from 'react-router-dom';
+import { RootState } from '../Redux/store';
 
-interface ProtectedRouteProps {
+type ProtectedRoutesProps = {
+  requiredRole: 'isAdmin' | 'isManager' | 'isUser';
   children: React.ReactNode;
-  requiredRole: keyof UserRoleType;
-}
+};
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRole }) => {
+const ProtectedRoutes: React.FC<ProtectedRoutesProps> = ({ requiredRole, children }) => {
   const currentUser = useSelector((state: RootState) => state.user.currentUser);
 
   if (!currentUser.isAuthenticated || !currentUser.user.userRole[requiredRole]) {
@@ -19,4 +18,4 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRole 
   return <>{children}</>;
 };
 
-export default ProtectedRoute;
+export default ProtectedRoutes;

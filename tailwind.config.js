@@ -10,7 +10,7 @@ module.exports = {
     },
     extend: {
       colors: {
-        myBlue: "#0071CE",
+        myBlue: "#081F8F",
         myPink: "#787878",
       },
       backgroundImage: (theme) => ({

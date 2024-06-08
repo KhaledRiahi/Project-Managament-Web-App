@@ -27,12 +27,12 @@ const Login = () => {
   }, []);
 
   const handleSignup = () => {
-    const data = { email, password, confirmPassword };
+    const data: authDataType = { email, password, confirmPassword };
     auth(data, BE_signUp, setSignUpLoading);
   };
 
   const handleSignin = () => {
-    const data = { email, password };
+    const data: authDataType = { email, password };
     auth(data, BE_signIn, setSignInLoading);
   };
 
@@ -47,13 +47,8 @@ const Login = () => {
   const navigateToDashboardOrAdmin = (user: userType) => {
     if (user.userRole?.isAdmin) {
       navigate("/admin");
-    } else if (user.userRole?.isUser) {
+    } else if (user.userRole?.isUser || user.userRole?.isManager) {
       navigate("/Header");
-    } else if (user.userRole?.isManager){
-      navigate("/Header");
-      console.log("iam innnnnnnnnnnnnnnnnnnnn");
-      
-
     }
   };
 
@@ -65,6 +60,13 @@ const Login = () => {
 
   return (
     <div className="w-full md:w-[450px]">
+      <div className="text-center mb-4">
+        <img
+          src="https://firebasestorage.googleapis.com/v0/b/base-f2884.appspot.com/o/Mazarslogo.png?alt=media&token=63fbb653-2eb5-42a8-a1dd-b7ce7a9d956c"
+          alt="Mazars Logo"
+          className="mx-auto h-300 w-300"
+        />
+      </div>
       <h1 className="text-white text-center font-bold text-4xl md:text-6xl mb-10">
         {login ? "Login" : "Register"}
       </h1>
@@ -89,7 +91,6 @@ const Login = () => {
             onChange={(e) => setConfirmPassword(e.target.value)}
           />
         )}
-
         {login ? (
           <>
             <Button

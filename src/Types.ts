@@ -1,5 +1,5 @@
 import { FieldValue } from '@firebase/firestore';
-
+//import { File } from 'react-dropzone';
 export type setLoadingType = React.Dispatch<React.SetStateAction<boolean>>;
 
 export type authDataType = {
@@ -43,6 +43,7 @@ export const defaultUser: userType = {
 };
 
 export interface Client {
+  name: string | number | readonly string[] | undefined;
   id?: string;
   clientName: string;
   sector: string;
@@ -50,11 +51,32 @@ export interface Client {
   creationTime?: any;
 }
 
-interface Member {
-  id?: string;
+export type Member = {
+  id: string;
   name: string;
-  email: string;
-  cvShort?: File | string;
-  cvLong?: File | string;
-  [key: string]: any;
-}
+  experience: number;
+  position: string;
+  certification: string | File;
+  speciality: string;
+  diploma: string;
+  projects: string;
+  creationTime?: Date;
+  lastUpdated?: Date;
+};
+export type Project = {
+ 
+  id?: string;
+  projectName: string;
+  clientName: { Name: string; ClientAdress: string }[];
+  mazars: { Name: string} [];
+  interventionTeam: { name: string; role: string , ChefOfProject: string, technicalConsultant :string  }[];
+  projectDuration: string;
+  completionDate: string;
+  orderYear: string;
+  startDate: string;
+  partnerNames: string;
+  serviceDescription: string;
+  missionDeliverables: string;
+  technicalOffer?: string;
+  BDC?: string;
+};

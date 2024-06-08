@@ -1,0 +1,21 @@
+.pro-sidebar {
+    background-color: #0071C1  !important; /* myBlue */
+    color: #787878  !important;           /* myPink */
+  }
+  
+  .pro-sidebar .pro-menu-item,
+  .pro-sidebar .pro-menu-item a,
+  .pro-sidebar .pro-sub-menu {
+    color: #787878 !important; /* myPink */
+  }
+  
+  .pro-sidebar .pro-menu-item:hover,
+  .pro-sidebar .pro-menu-item a:hover {
+    background-color: #787878  !important; /* myPink with some transparency */
+  }
+  
+  .pro-sidebar .pro-sub-menu .pro-menu-item:hover,
+  .pro-sidebar .pro-sub-menu .pro-menu-item a:hover {
+    background-color: #787878  !important; /* myPink with some transparency */
+  }
+  

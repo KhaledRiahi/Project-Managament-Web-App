@@ -1,4 +1,4 @@
-import { createSlice } from '@reduxjs/toolkit';
+import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { userType } from '../Types';
 
 export const userStorageName = 'Portail Mazars';
@@ -46,20 +46,20 @@ const userSlice = createSlice({
   name: 'user',
   initialState,
   reducers: {
-    setUser: (state, action) => {
+    setUser: (state, action: PayloadAction<userType>) => {
       const user = action.payload;
       localStorage.setItem(userStorageName, JSON.stringify(user));
       state.currentUser = { user, isAuthenticated: true };
     },
-    setUsers: (state, action) => {
+    setUsers: (state, action: PayloadAction<userType[]>) => {
       state.users = action.payload;
     },
-    setAlertProps: (state, action) => {
-      const { open, recieverId, recieverName } = action.payload;
+    setAlertProps: (state, action: PayloadAction<{ open: boolean; recieverId?: string; recieverName?: string }>) => {
+      const { open, recieverId = '', recieverName = '' } = action.payload;
       state.alertProps = {
         open,
-        recieverId: recieverId || '',
-        recieverName: recieverName || '',
+        recieverId,
+        recieverName,
       };
     },
   },

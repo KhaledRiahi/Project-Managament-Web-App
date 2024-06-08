@@ -16,6 +16,7 @@ import {
   UserRoleType,
   Client,
   Member,
+  Project,
 } from "../Types";
 import { NavigateFunction } from "react-router";
 import {
@@ -42,13 +43,16 @@ import {
 } from "../Redux/userSlice";
 import { AppDispatch } from "../Redux/store";
 import ConvertTime from "../utils/ConvertTime";
-import { getDownloadURL, ref, uploadBytes } from "@firebase/storage";
-import { uploadBytesResumable } from "firebase/storage";
+
+
+import { getFirestore } from "firebase/firestore";
+import { toast } from "react-toastify";
+import { uploadBytesResumable, getDownloadURL, ref as storageRef } from 'firebase/storage';
 // collection names
 const usersColl = "users";
 const ClientsColl="Clients";
 const MemberColl="Equipes";
-
+const ProjectColl="Projets";
 
 // register or signup a user
 export const BE_signUp = (
@@ -362,11 +366,7 @@ export const getAllUsers = async (): Promise<userType[]> => {
   }
 };
 
-const userRole: UserRoleType = {
-  isAdmin: false,
-  isManager: false,
-  isUser: true,
-};
+
 
 
 
@@ -430,13 +430,20 @@ export const deleteClient = async (id: string): Promise<void> => {
   }
 };
 
-//////////////////////////////// Add Member /////////////////////////
 
 
 
+//////////////////////////////// Add Member ////////////////////////////////////
+
+
+
+
+
+
+// Upload file to storage and return download URL
 const uploadFile = async (file: File, path: string): Promise<string> => {
-  const storageRef = ref(storage, path);
-  const uploadTask = uploadBytesResumable(storageRef, file);
+  const s = storageRef(storage, path);
+  const uploadTask = uploadBytesResumable(s, file);
 
   return new Promise((resolve, reject) => {
     uploadTask.on(
@@ -454,23 +461,17 @@ const uploadFile = async (file: File, path: string): Promise<string> => {
 // Add a new member
 export const addMember = async (memberData: Member): Promise<string> => {
   try {
-    const { cvShort, cvLong, ...rest } = memberData;
+    const { certification, ...rest } = memberData;
 
-    let cvShortUrl = typeof cvShort === "string" ? cvShort : "";
-    let cvLongUrl = typeof cvLong === "string" ? cvLong : "";
+    let certificationUrl = typeof certification === "string" ? certification : "";
 
-    if (cvShort instanceof File) {
-      cvShortUrl = await uploadFile(cvShort, `members/${cvShort.name}`);
+    if (certification instanceof File) {
+      certificationUrl = await uploadFile(certification, `members/${certification.name}`);
     }
 
-    if (cvLong instanceof File) {
-      cvLongUrl = await uploadFile(cvLong, `members/${cvLong.name}`);
-    }
-
-    const docRef = await addDoc(collection(db, 'MemberColl'), {
+    const docRef = await addDoc(collection(db, 'Equipes'), {
       ...rest,
-      cvShort: cvShortUrl,
-      cvLong: cvLongUrl,
+      certification: certificationUrl,
       creationTime: serverTimestamp(),
     });
 
@@ -486,23 +487,17 @@ export const addMember = async (memberData: Member): Promise<string> => {
 // Update an existing member
 export const updateMember = async (id: string, updatedData: Partial<Member>): Promise<void> => {
   try {
-    const { cvShort, cvLong, ...rest } = updatedData;
+    const { certification, ...rest } = updatedData;
 
-    let cvShortUrl = typeof cvShort === "string" ? cvShort : "";
-    let cvLongUrl = typeof cvLong === "string" ? cvLong : "";
+    let certificationUrl = typeof certification === "string" ? certification : "";
 
-    if (cvShort instanceof File) {
-      cvShortUrl = await uploadFile(cvShort, `members/${cvShort.name}`);
+    if (certification instanceof File) {
+      certificationUrl = await uploadFile(certification, `members/${certification.name}`);
     }
 
-    if (cvLong instanceof File) {
-      cvLongUrl = await uploadFile(cvLong, `members/${cvLong.name}`);
-    }
-
-    await updateDoc(doc(db, 'MemberColl', id), {
+    await updateDoc(doc(db, 'Equipes', id), {
       ...rest,
-      ...(cvShortUrl && { cvShort: cvShortUrl }),
-      ...(cvLongUrl && { cvLong: cvLongUrl }),
+      ...(certificationUrl && { certification: certificationUrl }),
       lastUpdated: serverTimestamp(),
     });
 
@@ -517,7 +512,7 @@ export const updateMember = async (id: string, updatedData: Partial<Member>): Pr
 // Delete a member
 export const deleteMember = async (id: string): Promise<void> => {
   try {
-    await deleteDoc(doc(db, 'MemberColl', id));
+    await deleteDoc(doc(db, 'Equipes', id));
     toastSucc('Member deleted successfully');
   } catch (error) {
     toastErr('Failed to delete member');
@@ -529,7 +524,7 @@ export const deleteMember = async (id: string): Promise<void> => {
 // Get all members
 export const getMembers = async (): Promise<Member[]> => {
   try {
-    const querySnapshot = await getDocs(collection(db, 'MemberColl'));
+    const querySnapshot = await getDocs(collection(db, 'Equipes'));
     const members: Member[] = [];
     querySnapshot.forEach((doc) => {
       members.push({ id: doc.id, ...doc.data() } as Member);
@@ -541,3 +536,145 @@ export const getMembers = async (): Promise<Member[]> => {
     throw error;
   }
 };
+
+
+
+
+
+
+////////////////////////////////// PROJECT MANAGAMENT /////////////////////////////////////////
+
+
+
+
+
+
+
+
+
+export const uploadFile1 = async (file: File, path: string): Promise<string> => {
+  const ref = storageRef(storage, path);
+  const uploadTask = uploadBytesResumable(ref, file);
+
+  return new Promise((resolve, reject) => {
+    uploadTask.on(
+      'state_changed',
+      null,
+      (error) => reject(error),
+      async () => {
+        const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+        resolve(downloadURL);
+      }
+    );
+  });
+};
+
+const isFile = (value: any): value is File => {
+  return value instanceof File;
+};
+export const addProject = async (projectData: Project): Promise<string> => {
+  try {
+    const { technicalOffer, BDC, ...rest } = projectData;
+
+    let technicalOfferUrl: string | undefined;
+    let BDCUrl: string | undefined;
+
+    if (isFile(technicalOffer)) {
+      technicalOfferUrl = await uploadFile1(technicalOffer, `projects/${technicalOffer.name}`);
+    } else {
+      technicalOfferUrl = technicalOffer;
+    }
+
+    if (isFile(BDC)) {
+      BDCUrl = await uploadFile1(BDC, `projects/${BDC.name}`);
+    } else {
+      BDCUrl = BDC;
+    }
+
+    const docRef = await addDoc(collection(db, 'Projects'), {
+      ...rest,
+      technicalOffer: technicalOfferUrl,
+      BDC: BDCUrl,
+      creationTime: serverTimestamp(),
+    });
+
+    toast.success('Project added successfully');
+    return docRef.id;
+  } catch (error) {
+    toast.error('Failed to add project');
+    console.error(error);
+    throw error;
+  }
+};
+
+
+
+export const updateProject = async (id: string, updatedData: Partial<Project>): Promise<void> => {
+  try {
+    const { technicalOffer, BDC, ...rest } = updatedData;
+
+    let technicalOfferUrl: string | undefined;
+    let BDCUrl: string | undefined;
+
+    if (isFile(technicalOffer)) {
+      technicalOfferUrl = await uploadFile1(technicalOffer, `projects/${technicalOffer.name}`);
+    } else {
+      technicalOfferUrl = technicalOffer;
+    }
+
+    if (isFile(BDC)) {
+      BDCUrl = await uploadFile1(BDC, `projects/${BDC.name}`);
+    } else {
+      BDCUrl = BDC;
+    }
+
+    await updateDoc(doc(db, 'Projects', id), {
+      ...rest,
+      technicalOffer: technicalOfferUrl,
+      BDC: BDCUrl,
+      lastUpdated: serverTimestamp(),
+    });
+
+    toast.success('Project updated successfully');
+  } catch (error) {
+    toast.error('Failed to update project');
+    console.error(error);
+    throw error;
+  }
+};
+
+
+
+
+
+
+export const deleteProject = async (id: string): Promise<void> => {
+  try {
+    await deleteDoc(doc(db, 'Projects', id));
+    toast.success('Project deleted successfully');
+  } catch (error) {
+    toast.error('Failed to delete project');
+    console.error(error);
+    throw error;
+  }
+};
+
+export const getProjects = async (): Promise<Project[]> => {
+  try {
+    const querySnapshot = await getDocs(collection(db, 'Projects'));
+    const projects: Project[] = [];
+    querySnapshot.forEach((doc) => {
+      projects.push({ id: doc.id, ...doc.data() } as Project);
+    });
+    return projects;
+  } catch (error) {
+    toast.error('Failed to fetch projects');
+    console.error(error);
+    throw error;
+  }
+};
+
+
+
+
+
