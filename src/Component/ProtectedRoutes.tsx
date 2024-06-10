@@ -9,9 +9,9 @@ type ProtectedRoutesProps = {
 };
 
 const ProtectedRoutes: React.FC<ProtectedRoutesProps> = ({ requiredRole, children }) => {
-  const currentUser = useSelector((state: RootState) => state.user.currentUser);
+  const { user, isAuthenticated } = useSelector((state: RootState) => state.user.currentUser);
 
-  if (!currentUser.isAuthenticated || !currentUser.user.userRole[requiredRole]) {
+  if (!isAuthenticated || !user?.userRole[requiredRole]) {
     return <Navigate to="/unauthorized" />;
   }
 

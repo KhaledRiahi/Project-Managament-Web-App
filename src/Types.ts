@@ -64,12 +64,11 @@ export type Member = {
   lastUpdated?: Date;
 };
 export type Project = {
- 
-  id?: string;
+  id: string;
   projectName: string;
   clientName: { Name: string; ClientAdress: string }[];
-  mazars: { Name: string} [];
-  interventionTeam: { name: string; role: string , ChefOfProject: string, technicalConsultant :string  }[];
+  mazars: { Name: string }[];
+  interventionTeam: { name: string; role: string; ChefOfProject: string; technicalConsultant: string }[];
   projectDuration: string;
   completionDate: string;
   orderYear: string;
@@ -79,4 +78,5 @@ export type Project = {
   missionDeliverables: string;
   technicalOffer?: string;
   BDC?: string;
+  PV?:string;
 };

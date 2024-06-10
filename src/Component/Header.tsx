@@ -7,13 +7,12 @@ import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import { setUser as setUserAction } from '../Redux/userSlice';
 import { BE_signOut } from '../Backend/Querries';
 import Spinner from './Spinner';
-import ExampleWithProviders from './ClientTable'; // Import your table component
-import MemberTable from './AddMember'; // Import the MemberTable component
+import ExampleWithProviders from './ClientTable';
+import MemberTable from './AddMember';
 import { userType } from '../Types';
-import TableProject from "./AddProjet";
-import '../Assets/custom.css'; // Import your custom styles
-
-// Import Mazars logo
+import TableProject from './AddProjet';
+import CalendarComponent from '../Component/Calender';
+import '../Assets/custom.css';
 import MazarsLogo from '../Assets/MazarsLogo.png';
 
 const Header: React.FC = () => {
@@ -23,11 +22,12 @@ const Header: React.FC = () => {
   const [showClientTable, setShowClientTable] = useState(false);
   const [showMemberTable, setShowMemberTable] = useState(false);
   const [showProjectTable, setShowProjectTable] = useState(false);
+  const [showCalendar, setShowCalendar] = useState(false);
+
   useEffect(() => {
     const auth = getAuth();
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
-        // Convert Firebase User to userType
         const customUser: userType = {
           id: user.uid,
           username: user.displayName || '',
@@ -38,14 +38,14 @@ const Header: React.FC = () => {
           lastSeen: new Date().toISOString(),
           bio: '',
           userRole: {
-            isAdmin: false, // Default role, you can adjust this as needed
+            isAdmin: false,
             isManager: false,
             isUser: true,
           },
         };
         dispatch(setUserAction(customUser));
       } else {
-        navigate('/login'); // Redirect to login if user is not authenticated
+        navigate('/login');
       }
     });
 
@@ -54,7 +54,7 @@ const Header: React.FC = () => {
 
   const handleSignOut = async () => {
     setLogoutLoading(true);
-    await BE_signOut(dispatch, navigate, setLogoutLoading);
+    BE_signOut(dispatch, navigate, setLogoutLoading);
     setLogoutLoading(false);
   };
 
@@ -62,34 +62,41 @@ const Header: React.FC = () => {
     setShowClientTable(true);
     setShowMemberTable(false);
     setShowProjectTable(false);
+    setShowCalendar(false);
   };
 
   const handleAddMember = () => {
     setShowMemberTable(true);
     setShowClientTable(false);
     setShowProjectTable(false);
+    setShowCalendar(false);
   };
-  const handleAddtable = () => {
+
+  const handleAddProject = () => {
     setShowMemberTable(false);
     setShowClientTable(false);
     setShowProjectTable(true);
-    console.log("Porject Table");
-    
-
+    setShowCalendar(false);
   };
+
+  const handleShowCalendar = () => {
+    setShowMemberTable(false);
+    setShowClientTable(false);
+    setShowProjectTable(false);
+    setShowCalendar(true);
+  };
+
   const currentUser = useSelector((state: RootState) => state.user.currentUser.user);
 
   if (!currentUser) {
-    return <Spinner />; // Show a loading spinner while checking auth state
+    return <Spinner />;
   }
 
   return (
     <div className="flex">
-      {/* Sidebar */}
-      <Sidebar className="h-screen flex flex-col justify-between bg-myBlue  ">
+      <Sidebar className="h-screen flex flex-col justify-between bg-myBlue">
         <div className="p-4 flex items-center">
           <img src={MazarsLogo} alt="Mazars Logo" className="w-15 h-15 mr-2" />
-          
         </div>
         <Menu>
           {currentUser.userRole.isAdmin && (
@@ -99,22 +106,20 @@ const Header: React.FC = () => {
             <SubMenu label="Project Management">
               <MenuItem onClick={handleAddClient}>Add Client</MenuItem>
               <MenuItem onClick={handleAddMember}>Add Members</MenuItem>
-              <MenuItem onClick={handleAddtable}>Add Project</MenuItem>
+              <MenuItem onClick={handleAddProject}>Add Project</MenuItem>
+              <MenuItem onClick={handleShowCalendar}>Calendar</MenuItem>
             </SubMenu>
           )}
-          <MenuItem>Documentation</MenuItem>
-          <MenuItem>Calendar</MenuItem>
           <MenuItem onClick={handleSignOut} className="hover:text-white hover:bg-gray-600">
             {logoutLoading ? <Spinner /> : 'Sign Out'}
           </MenuItem>
         </Menu>
       </Sidebar>
-
-      {/* Content area */}
       <div className="flex-grow p-6">
-        {showClientTable && <ExampleWithProviders />} {/* Conditionally render the client table */}
+        {showClientTable && <ExampleWithProviders />}
         {showMemberTable && <MemberTable user={currentUser} />}
-        {showProjectTable && <TableProject />} 
+        {showProjectTable && <TableProject />}
+        {showCalendar && <CalendarComponent />}
       </div>
     </div>
   );

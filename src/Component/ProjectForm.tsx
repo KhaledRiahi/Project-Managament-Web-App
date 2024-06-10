@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Box, Button, TextField, Dialog, DialogActions, DialogContent, DialogTitle, Divider, Typography, MenuItem, Select, FormControl, InputLabel,
 } from '@mui/material';
+import { toast } from 'react-toastify';
 import { getMembers, getClients, uploadFile1 } from "../Backend/Querries";
 import { Project, Member, Client } from '../Types';
 import Input from './Input';
@@ -32,6 +33,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ project, onSave, onClose }) =
     missionDeliverables: '',
     technicalOffer: '',
     BDC: '',
+    PV:'',
   });
 
   const [members, setMembers] = useState<Member[]>([]);
@@ -104,7 +106,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ project, onSave, onClose }) =
     });
   };
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, type: 'technicalOffer' | 'BDC') => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, type: 'technicalOffer' | 'BDC'| 'PV') => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       const url = await uploadFile1(file, `projects/${file.name}`);
@@ -112,7 +114,34 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ project, onSave, onClose }) =
     }
   };
 
+  const validateForm = (): boolean => {
+    if (!formData.projectName.trim()) {
+      toast.error('Project Name is required');
+      return false;
+    }
+    if (!formData.projectDuration.trim()) {
+      toast.error('Project Duration is required');
+      return false;
+    }
+    if (!formData.completionDate.trim()) {
+      toast.error('Completion Date is required');
+      return false;
+    }
+    if (!formData.orderYear.trim()) {
+      toast.error('Order Year is required');
+      return false;
+    }
+    if (!formData.startDate.trim()) {
+      toast.error('Start Date is required');
+      return false;
+    }
+    return true;
+  };
+
   const handleSave = () => {
+    if (!validateForm()) {
+      return;
+    }
     const updatedInterventionTeam = selectedMembers.map(member => ({
       name: member.name,
       role: member.role,
@@ -288,6 +317,15 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ project, onSave, onClose }) =
               name={''}
             />
             {formData.BDC && <Typography variant="body2">BDC: {formData.BDC}</Typography>}
+          </Box>
+          <Box mt={2}>
+            <Typography variant="body2">Upload PV</Typography>
+            <Input
+              type="file"
+              onChange={(e) => handleFileChange(e, 'PV')}
+              name={''}
+            />
+            {formData.PV && <Typography variant="body2">PV: {formData.PV}</Typography>}
           </Box>
         </Box>
       </DialogContent>

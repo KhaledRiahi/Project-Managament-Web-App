@@ -1,6 +1,7 @@
 import {
   createUserWithEmailAndPassword,
   deleteUser,
+  getAuth,
   signInWithEmailAndPassword,
   signOut,
   updateEmail,
@@ -57,120 +58,138 @@ const ProjectColl="Projets";
 // register or signup a user
 export const BE_signUp = (
   data: authDataType,
-  setLoading: setLoadingType,
+  setLoading: React.Dispatch<React.SetStateAction<boolean>>,
   reset: () => void,
   goTo: NavigateFunction,
   dispatch: AppDispatch
 ) => {
-  const { email, password, confirmPassword } = data;
+  return new Promise<void>((resolve, reject) => {
+    const { email, password, confirmPassword } = data;
 
-  // loading true
-  setLoading(true);
+    setLoading(true);
 
-  if (email && password) {
-    if (password === confirmPassword) {
-      createUserWithEmailAndPassword(auth, email, password)
-        .then(async ({ user }) => {
-          if (user?.email) { // Check if user.email exists
-            const username = user.email.split("@")[0];
+    if (email && password) {
+      if (password === confirmPassword) {
+        createUserWithEmailAndPassword(auth, email, password)
+          .then(async ({ user }) => {
+            if (user?.email) { // Check if user.email exists
+              const username = user.email.split("@")[0];
 
-            const userInfo = await addUserToCollection(
-              user.uid,
-              user.email,
-              username // Assign the username here
-            );
+              const userInfo = await addUserToCollection(
+                user.uid,
+                user.email,
+                username // Assign the username here
+              );
 
-            // Set creation time separately
-            const userWithCreationTime: userType = {
-              ...userInfo,
-              creationTime: new Date().toISOString(), // Set creation time here
-            };
+              // Set creation time separately
+              const userWithCreationTime: userType = {
+                ...userInfo,
+                creationTime: new Date().toISOString(), // Set creation time here
+              };
 
-            // set user in store
-            dispatch(setUser(userWithCreationTime));
+              // Set user in store
+              dispatch(setUser(userWithCreationTime));
 
+              setLoading(false);
+              reset();
+              goTo("/Header");
+              resolve();
+            } else {
+              // Handle the case where user.email is null
+              toastErr("User email not found", setLoading);
+              reject(new Error("User email not found"));
+            }
+          })
+          .catch((err) => {
+            CatchErr(err);
             setLoading(false);
-            reset();
-            goTo("/dashboard");
-          } else {
-            // Handle the case where user.email is null
-            toastErr("User email not found", setLoading);
-          }
-        })
-        .catch((err) => {
-          CatchErr(err);
-          setLoading(false);
-        });
+            reject(err);
+          });
+      } else {
+        toastErr("Passwords must match!", setLoading);
+        reject(new Error("Passwords must match!"));
+      }
     } else {
-      toastErr("Passwords must match!", setLoading);
+      toastErr("Fields shouldn't be left empty!", setLoading);
+      reject(new Error("Fields shouldn't be left empty!"));
     }
-  } else {
-    toastErr("Fields shouldn't be left empty!", setLoading);
-  }
+  });
 };
+
 
 // sign in a user
 export const BE_signIn = (
   data: authDataType,
-  setLoading: setLoadingType,
+  setLoading: React.Dispatch<React.SetStateAction<boolean>>,
   reset: () => void,
   goTo: NavigateFunction,
   dispatch: AppDispatch
 ) => {
-  const { email, password } = data;
+  return new Promise<void>((resolve, reject) => {
+    const { email, password } = data;
 
-  // loading true
-  setLoading(true);
+    // loading true
+    setLoading(true);
 
-  signInWithEmailAndPassword(auth, email, password)
-    .then(async ({ user }) => {
-      // update user isOnline to true
-      await updateUserInfo({ id: user.uid, isOnline: true });
+    signInWithEmailAndPassword(auth, email, password)
+      .then(async ({ user }) => {
+        try {
+          // update user isOnline to true
+          await updateUserInfo({ id: user.uid, isOnline: true });
 
-      // get user info
-      const userInfo = await getUserInfo(user.uid);
-      
-      // set user in store
-      dispatch(setUser(userInfo));
+          // get user info
+          const userInfo = await getUserInfo(user.uid);
 
-      setLoading(false);
-      reset();
-      
-      goTo("/Header");
-    })
-    .catch((err) => {
-      CatchErr(err);
-      setLoading(false);
-    });
+          // set user in store
+          dispatch(setUser(userInfo));
+
+          setLoading(false);
+          reset();
+          goTo("/Header");
+          resolve();
+        } catch (error) {
+          
+          setLoading(false);
+          reject(error);
+        }
+      })
+      .catch((err) => {
+        CatchErr(err);
+        setLoading(false);
+        reject(err);
+      });
+  });
 };
 
-// signout
-export const BE_signOut = (
+
+///////////////////////// signout
+
+
+export const BE_signOut = async (
   dispatch: AppDispatch,
-  goTo: NavigateFunction,
-  setLoading: setLoadingType,
+  navigate: NavigateFunction,
+  setLoading: React.Dispatch<React.SetStateAction<boolean>>,
   deleteAcc?: boolean
 ) => {
   setLoading(true);
-  // logout in firebase
-  signOut(auth)
-    .then(async () => {
-      // set user offline
-      if (!deleteAcc) await updateUserInfo({ isOffline: true });
+  const auth = getAuth();
 
-      // set currentSelected user to empty user
-      dispatch(setUser(defaultUser));
+  try {
+    await signOut(auth);
+    // set currentSelected user to null
+    dispatch(setUser(null));
 
-      // remove from local storage
-      localStorage.removeItem(userStorageName);
-
-      // route to auth page
-      goTo("/");
-
-      setLoading(false);
-    })
-    .catch((err) => CatchErr(err));
+    // route to auth page
+    navigate("/");
+  } catch (err) {
+    console.error(err);
+  } finally {
+    setLoading(false);
+  }
 };
+
+
+
 
 // get user from local storage
 export const getStorageUser = () => {
@@ -351,6 +370,10 @@ export const convertFileToDataUrl = (file: File): Promise<string> => {
   });
 };
 
+////////////////////////////////////////USERS CRUD 
+
+
+
 export const getAllUsers = async (): Promise<userType[]> => {
   try {
     const querySnapshot = await getDocs(collection(db, usersColl));
@@ -361,10 +384,63 @@ export const getAllUsers = async (): Promise<userType[]> => {
     });
     return users;
   } catch (error) {
-    toastErr("Failed to fetch users");
+    console.error("Error fetching users: ", error); // Log the error for debugging purposes
+    toastErr("Failed to fetch users"); // Display error message to the user
     return [];
   }
 };
+
+
+
+
+export const updateUserRole = async (userId: string, newRole: UserRoleType): Promise<void> => {
+  try {
+    const userRef = doc(db, "users", userId);
+    await updateDoc(userRef, {
+      userRole: newRole
+    });
+  } catch (error) {
+    console.error("Error updating user role: ", error);
+    throw error;
+  }
+};
+
+
+
+export const addUserWithAuth = async (email: string, password: string, additionalData: Omit<userType, "id" | "email">): Promise<void> => {
+  try {
+    // Create user with email and password in Firebase Auth
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const user = userCredential.user;
+
+    // Prepare user data for Firestore
+    const userData = {
+      ...additionalData,
+      email: user.email,
+      id: user.uid,
+    };
+
+    // Add user data to Firestore
+    await setDoc(doc(db, "users", user.uid), userData);
+  } catch (error) {
+    console.error("Error adding user with auth: ", error);
+    throw error;
+  }
+};
+
+
+export const deleteUser1 = async (userId: string): Promise<void> => {
+  try {
+    await deleteDoc(doc(db, "users", userId));
+  } catch (error) {
+    console.error("Error deleting user: ", error);
+    throw error;
+  }
+};
+
+
+
+
 
 
 
@@ -574,10 +650,11 @@ const isFile = (value: any): value is File => {
 };
 export const addProject = async (projectData: Project): Promise<string> => {
   try {
-    const { technicalOffer, BDC, ...rest } = projectData;
+    const { technicalOffer, BDC, PV, id, ...rest } = projectData;
 
     let technicalOfferUrl: string | undefined;
     let BDCUrl: string | undefined;
+    let PVUrl: string | undefined;
 
     if (isFile(technicalOffer)) {
       technicalOfferUrl = await uploadFile1(technicalOffer, `projects/${technicalOffer.name}`);
@@ -591,15 +668,26 @@ export const addProject = async (projectData: Project): Promise<string> => {
       BDCUrl = BDC;
     }
 
-    const docRef = await addDoc(collection(db, 'Projects'), {
+    if (isFile(PV)) {
+      PVUrl = await uploadFile1(PV, `projects/${PV.name}`);
+    } else {
+      PVUrl = PV;
+    }
+
+    const docRef = doc(collection(db, 'Projects'));
+    const projectId = docRef.id;
+
+    await setDoc(docRef, {
+      id: projectId,
       ...rest,
       technicalOffer: technicalOfferUrl,
       BDC: BDCUrl,
+      PV: PVUrl,
       creationTime: serverTimestamp(),
     });
 
     toast.success('Project added successfully');
-    return docRef.id;
+    return projectId;
   } catch (error) {
     toast.error('Failed to add project');
     console.error(error);
@@ -607,14 +695,16 @@ export const addProject = async (projectData: Project): Promise<string> => {
   }
 };
 
-
-
 export const updateProject = async (id: string, updatedData: Partial<Project>): Promise<void> => {
   try {
-    const { technicalOffer, BDC, ...rest } = updatedData;
+    if (!id || typeof id !== 'string' || id.trim() === '') {
+      throw new Error('Invalid project ID');
+    }
 
+    const { technicalOffer, BDC, PV, ...rest } = updatedData;
     let technicalOfferUrl: string | undefined;
     let BDCUrl: string | undefined;
+    let PVUrl: string | undefined;
 
     if (isFile(technicalOffer)) {
       technicalOfferUrl = await uploadFile1(technicalOffer, `projects/${technicalOffer.name}`);
@@ -628,20 +718,28 @@ export const updateProject = async (id: string, updatedData: Partial<Project>): 
       BDCUrl = BDC;
     }
 
+    if (isFile(PV)) {
+      PVUrl = await uploadFile1(PV, `projects/${PV.name}`);
+    } else {
+      PVUrl = PV;
+    }
+
     await updateDoc(doc(db, 'Projects', id), {
       ...rest,
       technicalOffer: technicalOfferUrl,
       BDC: BDCUrl,
+      PV: PVUrl,
       lastUpdated: serverTimestamp(),
     });
 
     toast.success('Project updated successfully');
   } catch (error) {
-    toast.error('Failed to update project');
-    console.error(error);
+    console.error('Error updating project:', error);
+    toast.error(`Failed to update project: ${error}`);
     throw error;
   }
 };
+
 
 
 
@@ -649,30 +747,49 @@ export const updateProject = async (id: string, updatedData: Partial<Project>): 
 
 
 export const deleteProject = async (id: string): Promise<void> => {
+  console.log(`Attempting to delete project with ID: ${id}`);
+  
   try {
-    await deleteDoc(doc(db, 'Projects', id));
+    if (!id || typeof id !== 'string' || id.trim() === '') {
+      throw new Error('Invalid project ID');
+    }
+
+    const projectDoc = doc(db, 'Projects', id);
+    console.log(`Fetching project document: ${projectDoc.path}`);
+    
+    const docSnapshot = await getDoc(projectDoc);
+    
+    if (!docSnapshot.exists()) {
+     
+      return;
+    }
+
+    console.log('Project exists. Proceeding with deletion');
+    await deleteDoc(projectDoc);
     toast.success('Project deleted successfully');
+    console.log('Project deleted successfully');
   } catch (error) {
-    toast.error('Failed to delete project');
-    console.error(error);
+    console.error('Error deleting project:', error);
+    toast.error(`Failed to delete project: ${error}`);
     throw error;
   }
 };
 
+
+
+
+
 export const getProjects = async (): Promise<Project[]> => {
-  try {
+  
     const querySnapshot = await getDocs(collection(db, 'Projects'));
     const projects: Project[] = [];
     querySnapshot.forEach((doc) => {
       projects.push({ id: doc.id, ...doc.data() } as Project);
     });
     return projects;
-  } catch (error) {
-    toast.error('Failed to fetch projects');
-    console.error(error);
-    throw error;
-  }
-};
+  } 
+
+
 
 
 

@@ -9,8 +9,8 @@ import { QueryClient, QueryClientProvider, useMutation, useQuery, useQueryClient
 import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon, Visibility as VisibilityIcon, Refresh as RefreshIcon } from '@mui/icons-material';
 import { getProjects, addProject, updateProject, deleteProject } from "../Backend/Querries";
 import { Project } from '../Types';
-import ProjectForm from "../Component/ProjectForm"; // Assuming you have this component to add/edit projects
-import ProjectView from "../Component/ProjectView" // Assuming you have this component to view project details
+import ProjectForm from "../Component/ProjectForm";
+import ProjectView from "../Component/ProjectView";
 
 const ProjectTable: React.FC = () => {
   const [validationErrors, setValidationErrors] = useState<Record<string, string | undefined>>({});
@@ -64,9 +64,11 @@ const ProjectTable: React.FC = () => {
   const handleSaveProject = async (values: Project) => {
     if (editingProject) {
       if (editingProject.id) {
+        console.log('Updating project with ID:', editingProject.id);
         await updateProjectMutation.mutateAsync({ id: editingProject.id, data: values });
       } else {
-        console.error('Editing project ID is undefined');
+        console.error('Editing project ID is undefined', editingProject);
+        alert('Failed to save project: Editing project ID is undefined');
       }
       setEditingProject(undefined);
     } else {
@@ -76,17 +78,36 @@ const ProjectTable: React.FC = () => {
   };
 
   const handleDeleteProject = (row: any) => {
+    console.log('Row object:', row);
+
+    const projectId = row?.original?.id;
+    
+    if (!projectId) {
+      alert('Invalid project ID');
+      console.error('Invalid project ID:', row);
+      return;
+    }
+
+    console.log('Project ID to be deleted:', projectId);
+
     if (window.confirm('Are you sure you want to delete this project?')) {
-      deleteProjectMutation.mutate(row.original.id);
+      deleteProjectMutation.mutate(projectId, {
+        onError: (error) => {
+          console.error('Deletion failed with error:', error);
+          alert(`Failed to delete project: ${error}`);
+        },
+      });
     }
   };
 
   const handleEditProject = (row: any) => {
+    console.log('Editing project row:', row);
     setEditingProject(row.original);
     setIsFormOpen(true);
   };
 
   const handleViewProject = (row: any) => {
+    console.log('Viewing project row:', row);
     setViewingProject(row.original);
     setIsViewOpen(true);
   };
@@ -121,7 +142,10 @@ const ProjectTable: React.FC = () => {
     ),
     renderTopToolbarCustomActions: () => (
       <Box sx={{ display: 'flex', gap: '1rem' }}>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={() => setIsFormOpen(true)}>
+        <Button variant="contained" startIcon={<AddIcon />} onClick={() => {
+          setEditingProject(undefined);
+          setIsFormOpen(true);
+        }}>
           Add Project
         </Button>
         <Tooltip title="Refresh">
@@ -152,7 +176,7 @@ const ProjectTable: React.FC = () => {
         <ProjectView
           project={viewingProject}
           onClose={() => setIsViewOpen(false)}
-          open={isViewOpen} // Pass open state to ProjectView
+          open={isViewOpen}
         />
       )}
     </>

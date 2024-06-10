@@ -1,12 +1,14 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import Input from "./Input";
 import Button from "./Button";
 import { BE_signIn, BE_signUp, getStorageUser } from "../Backend/Querries";
 import { useNavigate } from "react-router";
-import { useDispatch } from "react-redux";
-import { AppDispatch } from "../Redux/store";
+import { useDispatch, useSelector } from "react-redux";
+import { AppDispatch, RootState } from "../Redux/store";
 import { authDataType, userType } from "../Types";
 import { setUser } from "../Redux/userSlice";
+import MazarsLogo from "../Assets/MazarsLogo.png";
+import Spinner from "./Spinner"; 
 
 const Login = () => {
   const [login, setLogin] = useState(true);
@@ -19,12 +21,23 @@ const Login = () => {
   const dispatch = useDispatch<AppDispatch>();
   const usr = getStorageUser();
 
+  const navigateToDashboardOrAdmin = useCallback(
+    (user: userType) => {
+      if (user.userRole?.isAdmin) {
+        navigate("/admin");
+      } else if (user.userRole?.isUser || user.userRole?.isManager) {
+        navigate("/header");
+      }
+    },
+    [navigate]
+  );
+
   useEffect(() => {
     if (usr?.id) {
       dispatch(setUser(usr));
       navigateToDashboardOrAdmin(usr);
     }
-  }, []);
+  }, [usr, dispatch, navigateToDashboardOrAdmin]);
 
   const handleSignup = () => {
     const data: authDataType = { email, password, confirmPassword };
@@ -41,16 +54,11 @@ const Login = () => {
     func: any,
     setLoading: React.Dispatch<React.SetStateAction<boolean>>
   ) => {
-    func(data, setLoading, reset, navigateToDashboardOrAdmin, dispatch);
+    setLoading(true);
+    func(data, setLoading, reset, navigateToDashboardOrAdmin, dispatch)
+      .finally(() => setLoading(false));
   };
-
-  const navigateToDashboardOrAdmin = (user: userType) => {
-    if (user.userRole?.isAdmin) {
-      navigate("/admin");
-    } else if (user.userRole?.isUser || user.userRole?.isManager) {
-      navigate("/Header");
-    }
-  };
+  
 
   const reset = () => {
     setEmail("");
@@ -61,11 +69,7 @@ const Login = () => {
   return (
     <div className="w-full md:w-[450px]">
       <div className="text-center mb-4">
-        <img
-          src="https://firebasestorage.googleapis.com/v0/b/base-f2884.appspot.com/o/Mazarslogo.png?alt=media&token=63fbb653-2eb5-42a8-a1dd-b7ce7a9d956c"
-          alt="Mazars Logo"
-          className="mx-auto h-300 w-300"
-        />
+        <img src={MazarsLogo} alt="Mazars Logo" className="mx-auto h-300 w-300" />
       </div>
       <h1 className="text-white text-center font-bold text-4xl md:text-6xl mb-10">
         {login ? "Login" : "Register"}
@@ -111,6 +115,7 @@ const Login = () => {
           </>
         )}
       </div>
+      {(signUpLoading || signInLoading) && <Spinner />}
     </div>
   );
 };

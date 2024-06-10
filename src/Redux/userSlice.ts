@@ -22,7 +22,7 @@ export const defaultUser: userType = {
 type userStateType = {
   users: userType[];
   currentUser: {
-    user: userType;
+    user: userType | null;
     isAuthenticated: boolean;
   };
   alertProps: {
@@ -34,7 +34,7 @@ type userStateType = {
 
 const initialState: userStateType = {
   users: [],
-  currentUser: { user: { ...defaultUser }, isAuthenticated: false },
+  currentUser: { user: null, isAuthenticated: false },
   alertProps: {
     open: false,
     recieverId: '',
@@ -46,10 +46,15 @@ const userSlice = createSlice({
   name: 'user',
   initialState,
   reducers: {
-    setUser: (state, action: PayloadAction<userType>) => {
+    setUser: (state, action: PayloadAction<userType | null>) => {
       const user = action.payload;
-      localStorage.setItem(userStorageName, JSON.stringify(user));
-      state.currentUser = { user, isAuthenticated: true };
+      if (user) {
+        localStorage.setItem(userStorageName, JSON.stringify(user));
+        state.currentUser = { user, isAuthenticated: true };
+      } else {
+        localStorage.removeItem(userStorageName);
+        state.currentUser = { user: null, isAuthenticated: false };
+      }
     },
     setUsers: (state, action: PayloadAction<userType[]>) => {
       state.users = action.payload;
