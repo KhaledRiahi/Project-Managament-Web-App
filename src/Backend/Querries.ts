@@ -319,7 +319,7 @@ const addUserToCollection = async (
     bio: `${username},`,
     userRole:{ 
       isAdmin: false,
-      isManager: true,
+      isManager: false,
       isUser: true,
       
     }
